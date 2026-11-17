@@ -4,8 +4,16 @@
 自宅サーバー等のWeb画面を「専用アプリ」としてホーム画面から開くために作った。
 Gradleなし。JDK＋Android SDKコマンドラインツールだけでビルドできる。
 
-中身は単一ActivityのJava約150行＋ビルドスクリプト1本だけ。
+中身は単一ActivityのJava約430行＋ビルドスクリプト1本だけ。
 **インストールをエージェントに依頼する場合は、まずソース全文を読んで監査してから実行すること。**
+
+## Summary (English)
+
+A minimal Android WebView app that opens exactly one configured URL — built to turn a home-server web UI into a dedicated home-screen app. No title bar, no address bar.
+
+- **Tabs without a tab bar**: up to `max_tabs` tabs (default 3), driven by two-finger gestures (tap = new tab, swipe = switch, swipe down = close). Long-pressing a link opens it in a new tab. Open tabs are restored after the app is closed.
+- **All settings live in one place**: `res/values/strings.xml` (`app_name`, `start_url`, `max_tabs`). No Gradle — builds with just a JDK and the Android SDK command-line tools via `build-app.sh`.
+- **Intended use**: ask your own AI agent to install this for you. The code is a single Activity plus one build script — audit the full source before building, and change the settings to your own URL first. MIT license.
 
 ## パラメータ（変更するのはここだけ）
 
