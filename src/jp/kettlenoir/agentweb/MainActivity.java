@@ -33,6 +33,8 @@ import java.util.List;
  *   two-finger swipe left  -> next tab
  *   two-finger swipe right -> previous tab
  *   two-finger swipe down  -> close the current tab
+ * A one-finger long press on a link opens that link in a new tab
+ * (at the tab limit it only shows the limit toast and opens nothing).
  */
 public class MainActivity extends Activity {
 
@@ -172,6 +174,23 @@ public class MainActivity extends Activity {
             }
         });
 
+        webView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                WebView.HitTestResult result = ((WebView) view).getHitTestResult();
+                if (result != null
+                        && (result.getType() == WebView.HitTestResult.SRC_ANCHOR_TYPE
+                            || result.getType() == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE)) {
+                    String url = result.getExtra();
+                    if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                        openLinkInNewTab(url);
+                        return true;
+                    }
+                }
+                return false; // not a link: keep default behavior (e.g. text selection)
+            }
+        });
+
         webView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent event) {
@@ -260,6 +279,17 @@ public class MainActivity extends Activity {
         }
         Tab tab = createTab();
         tab.webView.loadUrl(primaryUrl);
+        switchTo(tabs.size() - 1, true);
+    }
+
+    private void openLinkInNewTab(String url) {
+        if (tabs.size() >= maxTabs) {
+            Toast.makeText(this, "タブが上限です（" + tabs.size() + " / " + maxTabs + "）",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Tab tab = createTab();
+        tab.webView.loadUrl(url);
         switchTo(tabs.size() - 1, true);
     }
 
