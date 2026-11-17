@@ -3,6 +3,7 @@ package jp.kettlenoir.agentweb;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -35,6 +36,8 @@ import java.util.List;
  *   two-finger swipe down  -> close the current tab
  * A one-finger long press on a link opens that link in a new tab
  * (at the tab limit it only shows the limit toast and opens nothing).
+ * Open tabs (their URLs and the active tab) are persisted and restored
+ * after the app is closed or killed.
  */
 public class MainActivity extends Activity {
 
@@ -51,6 +54,7 @@ public class MainActivity extends Activity {
 
     private static class Tab {
         WebView webView;
+        String currentUrl;
         boolean triedFallback = false;
         boolean showingError = false;
     }
@@ -85,11 +89,52 @@ public class MainActivity extends Activity {
                 }
             }
             switchTo(Math.min(savedInstanceState.getInt("active_index", 0), tabs.size() - 1), false);
-        } else {
+        } else if (!restorePersistedTabs()) {
             Tab tab = createTab();
+            tab.currentUrl = primaryUrl;
             tab.webView.loadUrl(primaryUrl);
             switchTo(0, false);
         }
+    }
+
+    // ---- tab persistence (survives the app being closed or killed) ----
+    private void persistTabs() {
+        if (tabs.isEmpty()) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tabs.size(); i++) {
+            if (i > 0) {
+                sb.append('\n');
+            }
+            String url = tabs.get(i).currentUrl;
+            sb.append(url != null ? url : primaryUrl);
+        }
+        getSharedPreferences("tabs", MODE_PRIVATE).edit()
+                .putString("urls", sb.toString())
+                .putInt("active", activeIndex)
+                .apply();
+    }
+
+    private boolean restorePersistedTabs() {
+        SharedPreferences prefs = getSharedPreferences("tabs", MODE_PRIVATE);
+        String saved = prefs.getString("urls", null);
+        if (saved == null || saved.isEmpty()) {
+            return false;
+        }
+        String[] urls = saved.split("\n");
+        int count = Math.min(urls.length, maxTabs);
+        if (count <= 0) {
+            return false;
+        }
+        for (int i = 0; i < count; i++) {
+            Tab tab = createTab();
+            tab.currentUrl = urls[i];
+            tab.webView.loadUrl(urls[i]);
+        }
+        int active = Math.min(Math.max(prefs.getInt("active", 0), 0), tabs.size() - 1);
+        switchTo(active, false);
+        return true;
     }
 
     private Tab createTab() {
@@ -141,6 +186,10 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 if (url != null && (url.startsWith(primaryUrl) || url.startsWith(fallbackUrl))) {
                     tab.showingError = false;
+                }
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    tab.currentUrl = url;
+                    persistTabs();
                 }
             }
         });
@@ -278,6 +327,7 @@ public class MainActivity extends Activity {
             return;
         }
         Tab tab = createTab();
+        tab.currentUrl = primaryUrl;
         tab.webView.loadUrl(primaryUrl);
         switchTo(tabs.size() - 1, true);
     }
@@ -289,6 +339,7 @@ public class MainActivity extends Activity {
             return;
         }
         Tab tab = createTab();
+        tab.currentUrl = url;
         tab.webView.loadUrl(url);
         switchTo(tabs.size() - 1, true);
     }
@@ -314,6 +365,7 @@ public class MainActivity extends Activity {
         tab.webView.destroy();
         if (tabs.isEmpty()) {
             Tab fresh = createTab();
+            fresh.currentUrl = primaryUrl;
             fresh.webView.loadUrl(primaryUrl);
             switchTo(0, true);
         } else {
@@ -329,6 +381,7 @@ public class MainActivity extends Activity {
             tabs.get(i).webView.setVisibility(i == index ? View.VISIBLE : View.GONE);
         }
         activeIndex = index;
+        persistTabs();
         if (announce) {
             Toast.makeText(this, "タブ " + (index + 1) + " / " + tabs.size(),
                     Toast.LENGTH_SHORT).show();
@@ -387,6 +440,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        persistTabs();
         for (Tab tab : tabs) {
             tab.webView.onPause();
         }
