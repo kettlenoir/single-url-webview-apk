@@ -4,10 +4,12 @@
   SETTINGS — this file is the ONLY place you need to edit.
   app_name  : label shown on the home screen / app list.
   start_url : the single URL this browser opens at launch.
+  max_tabs  : maximum number of tabs (two-finger gestures).
   Defaults below are the original author's own settings.
   ============================================================
 -->
 <resources>
     <string name="app_name">AGENT WEB</string>
     <string name="start_url">http://192.168.11.100:2436/</string>
+    <integer name="max_tabs">3</integer>
 </resources>
