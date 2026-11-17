@@ -1,4 +1,4 @@
-# android-webview-launcher
+# single-url-webview-apk
 
 指定した1つのURLだけを開く、Android用の最小WebViewブラウザ。
 自宅サーバー等のWeb画面を「専用アプリ」としてホーム画面から開くために作った。
